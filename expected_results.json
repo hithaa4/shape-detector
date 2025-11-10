@@ -1,7 +1,7 @@
 {
     "img1.png": ["rectangle"],
     "img2.png": ["circle"],
-    "img3.png": ["square"],
+    "img3.png": ["star"],
     "img4.png": ["triangle"],
     "img5.png": ["triangle", "square", "circle"],
     "img6.png": ["circle", "triangle"],

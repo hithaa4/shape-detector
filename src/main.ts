@@ -1,6 +1,6 @@
 // src/main.ts
 
-export type ShapeType = 'triangle' | 'square' | 'rectangle' | 'pentagon' | 'circle' | 'unknown';
+export type ShapeType = 'triangle' | 'star' | 'rectangle' | 'pentagon' | 'circle' | 'unknown';
 
 export interface DetectedShape {
   type: ShapeType;
@@ -108,10 +108,19 @@ export class ShapeDetector {
       }
       const contour = this._traceContour(mask, bbox.w, bbox.h, bbox.x, bbox.y);
 
-      // **FIXED: Better epsilon for RDP - less aggressive for polygons**
+      // **FIXED: Better epsilon for RDP - adaptive based on shape characteristics**
       const perimeter = this._perimeter(contour);
-      const epsilon = Math.max(0.015 * perimeter, 2.0); // Use perimeter-based epsilon
-      const approx = this._rdp(contour, epsilon);
+      let epsilon = Math.max(0.02 * perimeter, 2.5);
+      let approx = this._rdp(contour, epsilon);
+      
+      // If we get too many vertices, try more aggressive simplification
+      if (approx.length > 8) {
+        epsilon = Math.max(0.035 * perimeter, 3.5);
+        approx = this._rdp(contour, epsilon);
+      }
+      
+      // Post-process: remove nearly-collinear vertices
+      approx = this._removeCollinearPoints(approx, 10); // 10 degree tolerance
 
       // Compute circularity
       const circularity = (4 * Math.PI * area) / (perimeter * perimeter + 1e-9);
@@ -144,20 +153,42 @@ export class ShapeDetector {
         
         console.log(`Triangle angles: ${angles.map(a => a.toFixed(1)).join(', ')}, avg: ${avgAngle.toFixed(1)}, variance: ${angleVariance.toFixed(1)}`);
       } else if (vcount === 4) {
-        // Square vs Rectangle
+        // Could be square, rectangle, OR a triangle with one extra vertex
         const angles = this._getAllAngles(approx);
         const avgAngle = angles.reduce((a, b) => a + b, 0) / angles.length;
         
-        if (arRatio < 1.2 && Math.abs(avgAngle - 90) < 15) {
-          type = 'square';
-          confidence = 0.95;
-        } else {
+        // Check if this is actually a triangle misidentified as quadrilateral
+        // Look for one angle close to 180° (nearly collinear point)
+        const maxAngle = Math.max(...angles);
+        const minAngle = Math.min(...angles);
+        
+        console.log(`4-sided angles: ${angles.map(a => a.toFixed(1)).join(', ')}, max: ${maxAngle.toFixed(1)}, min: ${minAngle.toFixed(1)}`);
+        
+        if (maxAngle > 170 || minAngle < 10) {
+          // One vertex is nearly collinear - this is likely a triangle
+          type = 'triangle';
+          confidence = 0.85;
+          console.log(`Reclassified as triangle (collinear vertex detected)`);
+        }else {
           type = 'rectangle';
           confidence = 0.9;
         }
       } else if (vcount === 5) {
-        type = 'pentagon';
-        confidence = 0.85;
+        // Could be pentagon OR a square with one extra vertex
+        const angles = this._getAllAngles(approx);
+        const maxAngle = Math.max(...angles);
+        const minAngle = Math.min(...angles);
+        
+        if (maxAngle > 170 || minAngle < 10) {
+          // Likely a quadrilateral
+          if (arRatio < 1.2){
+            type = 'rectangle';
+            confidence = 0.85;
+          }
+        } else {
+          type = 'pentagon';
+          confidence = 0.85;
+        }
       } else if (vcount > 5 && vcount < 10) {
         // Polygon with many sides - could still be a circle that wasn't simplified enough
         if (circularity > 0.6) {
@@ -200,6 +231,30 @@ export class ShapeDetector {
       angles.push(ang);
     }
     return angles;
+  }
+
+  // Remove nearly collinear points from polygon
+  private _removeCollinearPoints(points: Array<{ x: number; y: number }>, toleranceDeg: number): Array<{ x: number; y: number }> {
+    if (points.length <= 3) return points;
+    
+    const result: Array<{ x: number; y: number }> = [];
+    const n = points.length;
+    
+    for (let i = 0; i < n; i++) {
+      const prev = points[(i - 1 + n) % n];
+      const curr = points[i];
+      const next = points[(i + 1) % n];
+      
+      const angle = this._angle(prev, curr, next) * 180 / Math.PI;
+      
+      // Keep point if angle is significantly different from 180° (not collinear)
+      if (angle < (180 - toleranceDeg) || points.length <= 3) {
+        result.push(curr);
+      }
+    }
+    
+    // Ensure we have at least 3 points
+    return result.length >= 3 ? result : points;
   }
 
   private _autoThreshold(gray: Uint8ClampedArray): number {
