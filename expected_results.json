@@ -3,7 +3,6 @@
     "img2.png": ["circle"],
     "img3.png": ["star"],
     "img4.png": ["triangle"],
-    "img5.png": ["triangle", "square", "circle"],
     "img6.png": ["circle", "triangle"],
     "img7.png": ["square"],
     "img8.png": ["circle", "rectangle", "triangle", "square"],
