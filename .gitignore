@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# IDE settings
+.vscode/
+
+# system files
+.DS_Store
+
+# TypeScript cache
+*.tsbuildinfo
