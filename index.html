@@ -48,13 +48,6 @@
           if (i === 0) ctx.moveTo(p.x, p.y);
           else ctx.lineTo(p.x, p.y);
       });
-      // for (const shape of results) {        
-      //   ctx.beginPath();
-      //   for (let i = 0; i < shape.contour.length; i++) {
-      //     const p = shape.contour[i];
-      //     if (i === 0) ctx.moveTo(p.x, p.y);
-      //     else ctx.lineTo(p.x, p.y);
-      //   }
         ctx.closePath();
         ctx.stroke();
 
