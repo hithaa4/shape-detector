@@ -1,0 +1,11 @@
+{
+    "img1.png": ["rectangle"],
+    "img2.png": ["circle"],
+    "img3.png": ["square"],
+    "img4.png": ["triangle"],
+    "img5.png": ["circle", "triangle", "square"],
+    "img6.png": ["triangle", "circle"],
+    "img7.png": ["rectangle", "square"],
+    "img8.png": ["circle", "rectangle", "triangle", "square"],
+    "img10.png": ["pentagon"]
+}
